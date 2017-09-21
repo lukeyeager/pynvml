@@ -1,40 +1,58 @@
 #include <pybind11/pybind11.h>
-
-int add(int i, int j) {
-    return i + j;
-}
+#include <nvml.h>
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(cmake_example, m) {
-    m.doc() = R"pbdoc(
-        Pybind11 example plugin
-        -----------------------
+#define NVML_CHECK(condition) \
+    do { \
+        nvmlReturn_t status = condition; \
+        if (status != NVML_SUCCESS) \
+            throw std::runtime_error(nvmlErrorString(status)); \
+    } while (0)
 
-        .. currentmodule:: cmake_example
+constexpr unsigned int STRMAX = 255;
 
-        .. autosummary::
-           :toctree: _generate
-
-           add
-           subtract
-    )pbdoc";
-
-    m.def("add", &add, R"pbdoc(
-        Add two numbers
-
-        Some other explanation about the add function.
-    )pbdoc");
-
-    m.def("subtract", [](int i, int j) { return i - j; }, R"pbdoc(
-        Subtract two numbers
-
-        Some other explanation about the subtract function.
-    )pbdoc");
-
+PYBIND11_MODULE(pynvml, m) {
 #ifdef VERSION_INFO
     m.attr("__version__") = VERSION_INFO;
 #else
     m.attr("__version__") = "dev";
 #endif
+
+    // Initialization and Cleanup
+
+    m.def("nvmlInit", []() { NVML_CHECK(nvmlInit()); });
+    m.def("nvmlShutdown", []() { NVML_CHECK(nvmlShutdown()); });
+
+    // System Queries
+
+    m.def("nvmlSystemGetDriverVersion", []() {
+        char version[STRMAX];
+        NVML_CHECK(nvmlSystemGetDriverVersion(version, STRMAX));
+        return std::string(version);
+    });
+    m.def("nvmlSystemGetNVMLVersion", []() {
+        char version[STRMAX];
+        NVML_CHECK(nvmlSystemGetNVMLVersion(version, STRMAX));
+        return std::string(version);
+    });
+
+    // Device Queries
+
+    m.def("nvmlDeviceGetCount", []() {
+        unsigned int deviceCount;
+        NVML_CHECK(nvmlDeviceGetCount(&deviceCount));
+        return deviceCount;
+    });
+    m.def("nvmlDeviceGetHandleByIndex", [](unsigned int index) {
+        nvmlDevice_t device;
+        NVML_CHECK(nvmlDeviceGetHandleByIndex(index, &device));
+        return (void*)device;
+    });
+    m.def("nvmlDeviceGetName", [](void* handle) {
+        nvmlDevice_t device = (nvmlDevice_t)handle;
+        char name[STRMAX];
+        NVML_CHECK(nvmlDeviceGetName(device, name, STRMAX));
+        return std::string(name);
+    });
 }

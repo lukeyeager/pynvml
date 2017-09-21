@@ -57,13 +57,14 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-    name='cmake_example',
+    name='pynvml',
     version='0.0.1',
-    author='Dean Moldovan',
-    author_email='dean0x7d@gmail.com',
-    description='A test project using pybind11 and CMake',
+    author='Luke Yeager',
+    author_email='lyeager@nvidia.com',
+    description='Python bindings for NVML',
     long_description='',
-    ext_modules=[CMakeExtension('cmake_example')],
+    ext_modules=[CMakeExtension('pynvml')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
+    tests_require=['pytest'],
 )
